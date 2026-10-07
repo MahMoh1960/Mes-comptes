@@ -123,13 +123,18 @@ function save() {
 const flushSave = () => (idb.db ? idb.set('kv', 'state', S) : Promise.resolve());
 window.addEventListener('pagehide', () => { if (S) flushSave().catch(() => {}); });
 
+function migrate() {
+  const defs = { p_orge: 6.5, p_ble: 7.5, p_lentilles: 8 };
+  (S.produits || []).forEach(p => { if (p.base === 'kg' && !(p.dalKg > 0)) p.dalKg = defs[p.id] || 7; });
+}
+
 function defaultState() {
   return {
     v: 1, lang: 'fr', comptes: [], ops: [], journal: [], pin: null, pinLen: 4, salt: null, lastBackup: 0,
     produits: [
-      { id: 'p_orge', nom: 'Orge', nomAr: 'شعير', base: 'kg', sacKg: 50 },
-      { id: 'p_ble', nom: 'Blé', nomAr: 'قمح', base: 'kg', sacKg: 50 },
-      { id: 'p_lentilles', nom: 'Lentilles', nomAr: 'عدس', base: 'kg', sacKg: 50 },
+      { id: 'p_orge', nom: 'Orge', nomAr: 'شعير', base: 'kg', sacKg: 50, dalKg: 6.5 },
+      { id: 'p_ble', nom: 'Blé', nomAr: 'قمح', base: 'kg', sacKg: 50, dalKg: 7.5 },
+      { id: 'p_lentilles', nom: 'Lentilles', nomAr: 'عدس', base: 'kg', sacKg: 50, dalKg: 8 },
       { id: 'p_paille', nom: 'Paille', nomAr: 'تبن', base: 'botte', sacKg: 0 }
     ]
   };
@@ -147,10 +152,11 @@ const inCamp = o => camp === 'all' || o.campagne === camp;
 const opsOf = (cid, withVoid = false) => S.ops.filter(o => o.compte === cid && (withVoid || !o.annule) && inCamp(o));
 
 const UNIT_F = { kg: 1, qx: 100, t: 1000 };
-const unitsFor = p => p && p.base === 'botte' ? ['botte'] : ['kg', 'qx', 't', 'sac'];
+const unitsFor = p => p && p.base === 'botte' ? ['botte'] : ['kg', 'qx', 't', 'sac', 'dal'];
 function toBase(p, qte, unite) {
   if (p.base === 'botte') return qte;
   if (unite === 'sac') return qte * (p.sacKg || 50);
+  if (unite === 'dal') return qte * (p.dalKg || 7);
   return qte * (UNIT_F[unite] || 1);
 }
 function qtyPlain(p, base) {
@@ -378,15 +384,19 @@ function viewAccount() {
   const b = bilan(ops);
   const natChips = Object.entries(b.nat).filter(([, n]) => n.solde !== 0)
     .map(([pid, n]) => `<span class="${cls(n.solde)}">${esc(pname(produit(pid)))} ${qh(produit(pid), n.solde)}</span>`).join('');
-  const waNum = waNumber(c.tel);
-  const hero = `<div class="sum-main ${cls(b.solde)}">${M(b.solde)}</div><div class="sum-lbl">${lbl(b.solde)}${camp !== 'all' ? ` — ${t('campaign')} ${camp}` : ''}</div>
-    <div class="sum-sub"><div><span>${t('total_gave')}</span><b>${M(b.donne)}</b></div><div><span>${t('total_recv')}</span><b>${M(b.recu)}</b></div></div>
-    ${natChips ? `<div class="nts-h">${natChips}</div>` : ''}
-    <div class="hdr-acts">
+  const acts = `<div class="hdr-acts">
       <button class="pill" data-a="statement" data-id="${c.id}">${ic('print')}${t('statement')}</button>
       <button class="pill" data-a="wa" data-id="${c.id}">${ic('wa')}${t('whatsapp')}</button>
       ${c.tel ? `<a class="pill" href="tel:${esc(c.tel.replace(/\s/g, ''))}">${ic('phone')}${t('call')}</a>` : ''}
       <button class="pill" data-a="edit-account" data-id="${c.id}">${ic('edit')}${t('edit')}</button></div>`;
+  const natLbl = x => x > 0 ? t('to_receive') : x < 0 ? t('to_deliver') : t('settled_acc');
+  const prods = Object.entries(b.nat);
+  const heroNat = `<div class="sum-lbl" style="margin-top:12px">${t('nature_position')}${camp !== 'all' ? ` — ${t('campaign')} ${camp}` : ''}</div>
+    ${prods.length ? `<div class="nat-sum">${prods.map(([pid, n]) => { const p = produit(pid); return `<div class="ns"><span class="ns-n">${esc(pname(p))}</span><span class="ns-v ${cls(n.solde)}">${n.solde > 0 ? '+' : ''}${qh(p, n.solde)}</span><span class="ns-l">${natLbl(n.solde)}</span><span class="ns-s">${t('gave_short')} ${qh(p, n.donne)} — ${t('recv_short')} ${qh(p, n.recu)}</span></div>`; }).join('')}</div>` : `<div class="sum-lbl" style="margin-top:10px">${t('no_ops')}</div>`}
+    ${b.valeur ? `<div class="sum-sub"><div><span>${t('b_value')}</span><b>${M(b.valeur)}</b></div></div>` : ''}${acts}`;
+  const hero = tab === 'nature' ? heroNat : `<div class="sum-main ${cls(b.solde)}">${M(b.solde)}</div><div class="sum-lbl">${lbl(b.solde)}${camp !== 'all' ? ` — ${t('campaign')} ${camp}` : ''}</div>
+    <div class="sum-sub"><div><span>${t('total_gave')}</span><b>${M(b.donne)}</b></div><div><span>${t('total_recv')}</span><b>${M(b.recu)}</b></div></div>
+    ${natChips ? `<div class="nts-h">${natChips}</div>` : ''}${acts}`;
   const tabs = `<div class="tabs" role="tablist">${[['argent', 'tab_money'], ['nature', 'tab_nature'], ['bilan', 'tab_balance']]
     .map(([v, k]) => `<button role="tab" aria-selected="${tab === v}" class="${tab === v ? 'on' : ''}" data-a="tab" data-v="${v}">${t(k)}</button>`).join('')}</div>`;
   let body = '';
@@ -524,7 +534,7 @@ const unitOpts = (p, sel) => unitsFor(p).map(u => `<option value="${u}" ${u === 
 const prodOpts = sel => S.produits.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(pname(p))}</option>`).join('');
 const MODES = ['cash', 'cheque', 'transfer', 'effet', 'other'];
 const modeOpts = sel => MODES.map(m => `<option value="${m}" ${m === sel ? 'selected' : ''}>${t('m_' + m)}</option>`).join('');
-const campChoices = sel => { const set = new Set(campOptions()); set.add(sel); const y = new Date().getFullYear(); set.add(`${y}/${y + 1}`); return [...set].sort().reverse().map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join(''); };
+const campChoices = sel => { const set = new Set(campOptions()); set.add(sel); const y0 = +campagneOf(todayISO()).slice(0, 4); for (let y = y0 + 1; y >= y0 - 9; y--) set.add(`${y}/${y + 1}`); return [...set].sort().reverse().map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join(''); };
 
 function opSheet(kind, o = {}) {
   if (!S.comptes.length) { toast(t('need_account')); return accountSheet(); }
@@ -715,7 +725,8 @@ function productSheet(id) {
     <div class="fld"><label for="p-nom">${t('product_name')}</label><input id="p-nom" value="${esc(p ? p.nom : '')}" autocomplete="off"></div>
     <div class="fld"><label for="p-ar">${t('product_name_ar')}</label><input id="p-ar" dir="rtl" value="${esc(p ? p.nomAr || '' : '')}" autocomplete="off"></div>
     <div class="fld"><label for="p-base">${t('base_unit')}</label><select id="p-base" data-change="pbase"><option value="kg" ${base === 'kg' ? 'selected' : ''}>${t('u_kg')} (${t('u_qx')}, ${t('u_t')}, ${t('u_sac')})</option><option value="botte" ${base === 'botte' ? 'selected' : ''}>${t('u_botte')}</option></select></div>
-    <div class="fld" id="p-sacbox" ${base === 'kg' ? '' : 'hidden'}><label for="p-sac">${t('sac_kg')}</label><input id="p-sac" inputmode="decimal" value="${p && p.sacKg ? p.sacKg : 50}"></div>
+    <div id="p-sacbox" ${base === 'kg' ? '' : 'hidden'}><div class="two"><div class="fld"><label for="p-sac">${t('sac_kg')}</label><input id="p-sac" inputmode="decimal" value="${p && p.sacKg ? p.sacKg : 50}"></div>
+    <div class="fld"><label for="p-dal">${t('dal_kg')}</label><input id="p-dal" inputmode="decimal" value="${p && p.dalKg ? p.dalKg : 7}"></div></div></div>
   </div><div class="sh-f"><p class="err" id="f-err" role="alert"></p><button class="btn block" data-a="save-product" data-id="${p ? p.id : ''}">${t('save')}</button>
   ${p ? `<button class="btn danger block" data-a="delete-product" data-id="${p.id}">${ic('trash')}${t('delete')}</button>` : ''}</div>`);
 }
@@ -796,6 +807,7 @@ async function importJSON(file) {
     if (data.app !== 'mescomptes' || !data.state || !Array.isArray(data.state.comptes) || !Array.isArray(data.state.ops)) throw new Error('bad');
     if (!confirm(t('import_confirm'))) return;
     S = Object.assign(defaultState(), data.state);
+    migrate();
     await idb.clear('photos');
     for (const k in (data.photos || {})) await idb.set('photos', k, data.photos[k]);
     await flushSave();
@@ -863,6 +875,15 @@ function waText(c) {
   return L.join('\n');
 }
 
+function waSheet(id) {
+  const c = compte(id); const n = waNumber(c.tel);
+  openSheet(`${shHead(t('wa_title'))}<div class="sh-b"><div class="fld"><label for="wa-text">${t('wa_message')}</label><textarea id="wa-text" rows="7">${esc(waText(c))}</textarea></div></div>
+    <div class="sh-f"><button class="btn block" data-a="wa-go">${ic('wa')}${t('wa_choose')}</button>
+    ${n ? `<button class="btn sec block" data-a="wa-go" data-n="${n}">${t('wa_to', { tel: esc(c.tel) })}</button>` : ''}
+    ${navigator.share ? `<button class="btn sec block" data-a="wa-share">${ic('share')}${t('wa_other')}</button>` : ''}
+    <button class="btn sec block" data-a="wa-copy">${t('wa_copy')}</button></div>`);
+}
+
 /* =====================================================================
    ACTIONS (clics)
    ===================================================================== */
@@ -918,9 +939,14 @@ const A = {
   'pick-photo'() { $('#f-photo').click(); },
   'rm-photo'() { photoRemoved = true; pendingPhoto = null; $('#photo-prev').hidden = true; $('#photo-rm').hidden = true; },
   statement(el) { printStatement(el.dataset.id); },
-  wa(el) {
-    const c = compte(el.dataset.id); const n = waNumber(c.tel);
-    window.open(`https://wa.me/${n}?text=${encodeURIComponent(waText(c))}`, '_blank');
+  wa(el) { waSheet(el.dataset.id); },
+  'wa-go'(el) { window.open(`https://wa.me/${el.dataset.n || ''}?text=${encodeURIComponent($('#wa-text').value)}`, '_blank'); },
+  'wa-share'() { navigator.share({ text: $('#wa-text').value }).catch(() => {}); },
+  'wa-copy'() {
+    const txt = $('#wa-text').value;
+    const ok = () => toast(t('copied'));
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(() => { $('#wa-text').select(); document.execCommand('copy'); ok(); });
+    else { $('#wa-text').select(); document.execCommand('copy'); ok(); }
   },
   lang(el) { S.lang = el.dataset.v; save(); applyLang(); render(); },
   'new-product'() { productSheet(); },
@@ -929,12 +955,12 @@ const A = {
     const nom = $('#p-nom').value.trim();
     if (!nom) return formErr(t('err_required') + ' : ' + t('product_name'));
     const base = $('#p-base').value;
-    const data = { nom, nomAr: $('#p-ar').value.trim(), base, sacKg: base === 'kg' ? (num($('#p-sac').value) > 0 ? num($('#p-sac').value) : 50) : 0 };
+    const data = { nom, nomAr: $('#p-ar').value.trim(), base, sacKg: base === 'kg' ? (num($('#p-sac').value) > 0 ? num($('#p-sac').value) : 50) : 0, dalKg: base === 'kg' ? (num($('#p-dal').value) > 0 ? num($('#p-dal').value) : 7) : 0 };
     if (el.dataset.id) {
       const p = produit(el.dataset.id);
       if (p.base !== base && S.ops.some(o => o.produit === p.id)) return formErr(t('product_used'));
       Object.assign(p, data);
-      if (data.base === 'kg') S.ops.filter(o => o.produit === p.id && o.unite === 'sac').forEach(o => { o.qteBase = r3(o.qte * data.sacKg); });
+      if (data.base === 'kg') S.ops.filter(o => o.produit === p.id && (o.unite === 'sac' || o.unite === 'dal')).forEach(o => { o.qteBase = r3(o.qte * (o.unite === 'sac' ? data.sacKg : data.dalKg)); });
     } else S.produits.push({ id: 'p_' + uid(), ...data });
     save(); closeSheet(); toast(t('saved'));
   },
@@ -1017,12 +1043,17 @@ async function boot() {
   try { await idb.open(); stored = await idb.get('kv', 'state'); }
   catch (e) { console.error(e); }
   S = Object.assign(defaultState(), stored || {});
+  migrate();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   history.replaceState({ name: 'home' }, '');
   applyLang();
   render();
   if (S.pin) showLock();
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(console.error);
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !sheetOpen) location.reload(); });
+    navigator.serviceWorker.register('sw.js').catch(console.error);
+  }
 }
 window.__app = { get S() { return S; } };   // pour les tests
 boot();

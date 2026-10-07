@@ -1,6 +1,6 @@
 /* Service worker : l'application fonctionne hors connexion.
    Pensez à changer VERSION à chaque mise à jour des fichiers. */
-const VERSION = 'mescomptes-v1';
+const VERSION = 'mescomptes-v2';
 const FILES = [
   './', './index.html', './style.css', './app.js', './i18n.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png',
@@ -8,7 +8,7 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

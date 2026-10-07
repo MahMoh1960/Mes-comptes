@@ -5,10 +5,10 @@ Application de gestion financière personnelle en **dirham marocain (MAD)**, en 
 ## Fonctions
 - **Comptes** : personnes, sociétés, banques. Solde positif = il vous doit, solde négatif = vous lui devez.
 - **Argent** : opérations « donné / reçu », mode (espèces, chèque, virement, effet), n° de chèque, banque, échéance, photo du reçu, solde cumulé ligne par ligne.
-- **Nature (troc)** : orge, blé, lentilles, paille (produits modifiables). Unités kg, quintal, tonne, sac (poids réglable), botte. Troc produit contre produit ou produit contre argent, valeur en DH facultative.
+- **Nature (troc)** : orge, blé, lentilles, paille (produits modifiables). Unités kg, quintal, tonne, sac et décalitre (poids réglables par produit), botte. Troc produit contre produit ou produit contre argent, valeur en DH facultative.
 - **Bilan par compte** : totaux donné/reçu, solde, détail par produit, par campagne agricole et par mode de paiement.
 - **Échéances** avec compteur de retards, **campagne agricole** (septembre à août) en filtre global.
-- **Relevé PDF** (bouton « Relevé PDF » → « Enregistrer au format PDF »), partage **WhatsApp**.
+- **Relevé PDF** (bouton « Relevé PDF » → « Enregistrer au format PDF »), partage **WhatsApp** (choix du contact, du numéro du compte ou d'une autre application).
 - **Historique des modifications** : on annule ou corrige sans rien perdre.
 - **Code PIN**, **sauvegarde / restauration JSON**, **export CSV** (Excel).
 - Fonctionne **hors connexion**, installable comme une application.
