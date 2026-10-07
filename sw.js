@@ -1,14 +1,19 @@
 /* Service worker : l'application fonctionne hors connexion.
    Pensez à changer VERSION à chaque mise à jour des fichiers. */
-const VERSION = 'mescomptes-v2';
+const VERSION = 'mescomptes-v3';
 const FILES = [
   './', './index.html', './style.css', './app.js', './i18n.js', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png',
-  './icons/apple-touch-icon.png', './icons/favicon-48.png'
+  './icon-192.png', './icon-512.png', './icon-512-maskable.png',
+  './apple-touch-icon.png', './favicon-48.png'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
+  // chaque fichier est ajouté séparément : un fichier manquant ne bloque plus l'installation
+  e.waitUntil(
+    caches.open(VERSION)
+      .then(c => Promise.all(FILES.map(f => c.add(new Request(f, { cache: 'reload' })).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {

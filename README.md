@@ -34,7 +34,7 @@ Désinstaller l'application ou vider les données du navigateur efface tout.
 Modifiez les fichiers, puis changez `VERSION` dans `sw.js` (ex. `mescomptes-v2`) pour que les téléphones rechargent la nouvelle version.
 
 ## Fichiers
-`index.html` · `style.css` · `app.js` (logique) · `i18n.js` (textes FR/AR) · `sw.js` (hors connexion) · `manifest.webmanifest` · `icons/`
+`index.html` · `style.css` · `app.js` (logique) · `i18n.js` (textes FR/AR) · `sw.js` (hors connexion) · `manifest.webmanifest` · 5 images `.png` (icônes). Tout est à la racine, sans sous-dossier : cela permet d'envoyer les fichiers depuis un téléphone.
 
 ## Pistes pour la suite
 Empreinte digitale (WebAuthn), graphiques, synchronisation entre appareils (nécessite un serveur), rappels par notification, import Excel.
