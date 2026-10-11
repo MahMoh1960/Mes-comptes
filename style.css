@@ -353,3 +353,13 @@ button.row:active { background: color-mix(in srgb, var(--blue) 10%, transparent)
 }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* Écran d'accès protégé */
+#gate{position:fixed;inset:0;z-index:9999;background:var(--head);display:flex;align-items:center;justify-content:center;padding:20px}
+.gbox{max-width:360px;width:100%;text-align:center;color:#fff}
+.gbox img{border-radius:22px}
+.gbox h2{color:var(--saffron);margin:10px 0 4px}
+.gbox input[type=password],.gbox input[type=text]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:1.05rem;background:#fff;color:var(--ink);text-align:center;box-sizing:border-box}
+.gl{display:block;margin:8px 0;font-size:.85rem;color:#dcdff0}
+.ge{color:#ffb4a9;min-height:1.4em}
+.gbox .btn{margin-top:6px}
